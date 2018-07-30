@@ -17,29 +17,57 @@ public class DBConnect {
 	private PreparedStatement preparedStatement = null;
 	private ResultSet resultSet = null;
 
+	private static DBConnect instance = null;
+	
+	private DBConnect() {
+		
+	}
+	
+	/*
+	 * Makes this class a Singleton.
+	 */
+	public static DBConnect getInstance() {
+		 if (instance == null)
+	            instance = new DBConnect();
+	 
+	      return instance;
+	}
+	
 	/*
 	 * Establishes a connection to the MySQL database.
 	 */
 	public void connect() throws Exception {
 		// Setup the connection with the DB
-		connect = DriverManager.getConnection("jdbc:mysql://localhost/fitness_tracker?useUnicode=true&useJDBCCompliantTimezoneShift=true"
-											+ "&useLegacyDatetimeCode=false&serverTimezone=UTC&verifyServerCertificate=false&useSSL=true"
-											+ "&user=root&password=root");
+		connect = DriverManager.getConnection(
+				"jdbc:mysql://localhost/fitness_tracker?useUnicode=true&useJDBCCompliantTimezoneShift=true"
+						+ "&useLegacyDatetimeCode=false&serverTimezone=UTC&verifyServerCertificate=false&useSSL=true"
+						+ "&user=root&password=root");
 
 	}
-	
+
+	/*
+	 * Print all fields of table.
+	 */
 	public void printTable(String table) throws SQLException {
-		statement = connect.createStatement();
-	
-		resultSet = statement.executeQuery("select * from fitness_tracker." + table);
-		
+		resultSet = selectFromTable("*", table);
+
 		int columnCount = resultSet.getMetaData().getColumnCount();
-		
-		while(resultSet.next()) {
-			for(int i = 1; i <= columnCount; i++) {
+
+		while (resultSet.next()) {
+			for (int i = 1; i <= columnCount; i++) {
 				System.out.println(resultSet.getString(i));
 			}
 		}
+	}
+
+	/*
+	 * Select fields from table.
+	 */
+	public ResultSet selectFromTable(String fields, String table) throws SQLException {
+		statement = connect.createStatement();
+		resultSet = statement.executeQuery("select " + fields + " from fitness_tracker." + table);
+		
+		return resultSet;
 	}
 	
 	/*
@@ -47,19 +75,20 @@ public class DBConnect {
 	 */
 	public void closeConnection() {
 		try {
-			if(resultSet != null) {
+			if (resultSet != null) {
 				resultSet.close();
 			}
 
-			if(statement != null) {
+			if (statement != null) {
 				statement.close();
 			}
 
-			if(connect != null) {
+			if (connect != null) {
 				connect.close();
 			}
-		} catch(Exception e) { }
-		
+		} catch (Exception e) {
+		}
+
 		System.out.println("Closed Connections!");
 	}
 }

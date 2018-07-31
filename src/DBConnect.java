@@ -62,11 +62,22 @@ public class DBConnect {
 
 	/*
 	 * Select fields from table.
+	 * OPTIONAL: Enter a where clause.
 	 */
-	public ResultSet selectFromTable(String fields, String table) throws SQLException {
+	public ResultSet selectFromTable(String fields, String table, String... options) throws SQLException {
 		statement = connect.createStatement();
-		resultSet = statement.executeQuery("select " + fields + " from fitness_tracker." + table);
 		
+		String query = "select " + fields + " from fitness_tracker." + table;
+		String opt = " where ";
+		
+		if(options.length == 0) {
+			resultSet = statement.executeQuery(query);
+		} else {
+			for(String s : options) {
+				opt = opt + s;
+			}
+			resultSet = statement.executeQuery("select " + fields + " from fitness_tracker." + table + opt);
+		}
 		return resultSet;
 	}
 	

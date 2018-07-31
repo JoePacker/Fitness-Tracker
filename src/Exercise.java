@@ -1,3 +1,5 @@
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 public class Exercise {
 
@@ -17,6 +19,22 @@ public class Exercise {
 	
 	public void setName(String name) {
 		this.name = name;
+	}
+	
+	/*
+	 * Set name of exercise object by getting name from exercise table using id.
+	 */
+	public void loadName(int id) {
+		DBConnect dbc = DBConnect.getInstance();
+		
+		try {
+			ResultSet rs = dbc.selectFromTable("name", "exercise", "id = " + id);
+			if(rs.next()) {
+				this.name = rs.getString(1);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	public int getWeight() {

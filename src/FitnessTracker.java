@@ -58,7 +58,16 @@ public class FitnessTracker extends Application{
 		
 		setTable.getColumns().addAll(exerciseCol, weightCol, repCol);
 		
-		ObservableList<Exercise> data = FXCollections.observableArrayList(new Exercise("Squat", 70, 5));
+		rs = dbc.selectFromTable("exercise_id, reps, weight", "work_set");
+		
+		ObservableList<Exercise> data = null;
+		
+		while(rs.next()) {
+			Exercise e = new Exercise(rs.getString(1), rs.getInt(2), rs.getInt(3));
+			e.loadName(rs.getInt(1));
+			data = FXCollections.observableArrayList(e);
+		}
+		
 		setTable.setItems(data);
 		
 		BorderPane border = new BorderPane();

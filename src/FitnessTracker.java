@@ -1,5 +1,7 @@
 
+import java.sql.Array;
 import java.sql.ResultSet;
+import java.util.ArrayList;
 
 import javafx.application.Application;
 import javafx.collections.ObservableList;
@@ -21,7 +23,7 @@ public class FitnessTracker extends Application{
 
 		try {
 			dbc.connect();	
-			dbc.printTable("work_set");
+			//dbc.printTable("work_set");
 			launch(args);
 		} catch (Exception e) {
 			throw e;
@@ -37,38 +39,61 @@ public class FitnessTracker extends Application{
 		
 		DBConnect dbc = DBConnect.getInstance();
 		
+		/* 
+		 * ComboBox
+		 */
 		ResultSet rs = dbc.selectFromTable("name", "exercise");
 		while(rs.next()) {
 			exerciseComboBox.getItems().add(rs.getString(1));
 		}
 		
+		/*
+		 * Label
+		 */
 		Label workoutLabel = new Label("Workout");
 		
+		/*
+		 * Table
+		 */
 		TableView<Exercise> setTable = new TableView<>();
 		setTable.setEditable(true);
 		
 		TableColumn<Exercise, String> exerciseCol = new TableColumn<>("Exercise");
 		exerciseCol.setCellValueFactory(new PropertyValueFactory<Exercise, String>("name"));
 		
-		TableColumn<Exercise, Integer> weightCol = new TableColumn<>("Weight");
-		weightCol.setCellValueFactory(new PropertyValueFactory<Exercise, Integer>("weight"));
-		
 		TableColumn<Exercise, Integer> repCol = new TableColumn<>("Reps");
 		repCol.setCellValueFactory(new PropertyValueFactory<Exercise, Integer>("reps"));
 		
-		setTable.getColumns().addAll(exerciseCol, weightCol, repCol);
+		TableColumn<Exercise, Integer> weightCol = new TableColumn<>("Weight");
+		weightCol.setCellValueFactory(new PropertyValueFactory<Exercise, Integer>("weight"));
 		
-		rs = dbc.selectFromTable("exercise_id, reps, weight", "work_set");
+		setTable.getColumns().addAll(exerciseCol, repCol, weightCol);
+	
 		
-		ObservableList<Exercise> data = null;
+		rs = dbc.selectFromTable("set_id", "workout", "code = 2");
+		//ArrayList<Integer> setIds = new ArrayList<Integer>();
+		
+		String setIds = null;
 		
 		while(rs.next()) {
-			Exercise e = new Exercise(rs.getString(1), rs.getInt(2), rs.getInt(3));
-			e.loadName(rs.getInt(1));
-			data = FXCollections.observableArrayList(e);
+			setIds += "," + rs.getString("set_id");
 		}
 		
-		setTable.setItems(data);
+		System.out.println("setids = " + setIds);
+		rs = dbc.selectFromTable("exercise_id, reps, weight", "work_set", "id in (" + setIds + ")");
+		
+		Workout workout = new Workout(2);
+		
+		while(rs.next()) {
+			System.out.println("ResultSet: " + rs.getRow());
+			System.out.println("Exercise id: " + rs.getInt("exercise_id"));
+			Exercise e = new Exercise(rs.getInt("exercise_id"), rs.getInt("reps"), rs.getInt("weight"));
+			workout.addExercise(e);
+		}
+		
+		System.out.println("length: " + workout.getExercises().size());
+		
+		setTable.setItems(workout.getExercises());
 		
 		BorderPane border = new BorderPane();
 		border.setTop(workoutLabel);

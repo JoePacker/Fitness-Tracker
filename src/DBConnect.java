@@ -16,71 +16,130 @@ public class DBConnect {
 	private Statement statement = null;
 	private PreparedStatement preparedStatement = null;
 	private ResultSet resultSet = null;
+	private String query;
+	private String queryType;
 
 	private static DBConnect instance = null;
-	
+
 	private DBConnect() {
-		
+
 	}
-	
+
 	/*
 	 * Makes this class a Singleton.
 	 */
 	public static DBConnect getInstance() {
-		 if (instance == null)
-	            instance = new DBConnect();
-	 
-	      return instance;
+		if (instance == null) {
+			instance = new DBConnect();
+		}
+
+		return instance;
 	}
-	
+
 	/*
 	 * Establishes a connection to the MySQL database.
 	 */
-	public void connect() throws Exception {
+	public void connect() {
 		// Setup the connection with the DB
-		connect = DriverManager.getConnection(
-				"jdbc:mysql://localhost/fitness_tracker?useUnicode=true&useJDBCCompliantTimezoneShift=true"
-						+ "&useLegacyDatetimeCode=false&serverTimezone=UTC&verifyServerCertificate=false&useSSL=true"
-						+ "&user=root&password=root");
+		try {
+			connect = DriverManager.getConnection(
+					"jdbc:mysql://localhost/fitness_tracker?useUnicode=true&useJDBCCompliantTimezoneShift=true"
+							+ "&useLegacyDatetimeCode=false&serverTimezone=UTC&verifyServerCertificate=false&useSSL=true"
+							+ "&user=root&password=root");
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 
 	}
 
-	/*
-	 * Print all fields of table.
-	 */
-	public void printTable(String table) throws SQLException {
-		resultSet = selectFromTable("*", table);
+	public DBConnect select(String field, String table) {
+		this.queryType = "SELECT";
+		this.query = "SELECT " + field + " FROM " + table;
+		return this;
+	}
 
-		int columnCount = resultSet.getMetaData().getColumnCount();
+	public DBConnect select(String[] fields, String table) {
+		this.queryType = "SELECT";
+		this.query = "SELECT " + String.join(",", fields) + " FROM " + table;
+		return this;
+	}
 
-		while (resultSet.next()) {
-			for (int i = 1; i <= columnCount; i++) {
-				System.out.println(resultSet.getString(i));
+	public DBConnect where(String field, String operator, String value) {
+		this.query = this.query + " WHERE " + field + operator + value;
+		return this;
+	}
+
+	public DBConnect where(String[][] clauses) {
+		this.query = this.query + " WHERE ";
+
+		for (int i = 0; i < clauses.length; i++) {
+			this.query = this.query + clauses[i][0] + clauses[i][1] + clauses[i][2];
+
+			if (i != clauses.length - 1) {
+				this.query = this.query + " AND ";
 			}
 		}
+
+		return this;
 	}
 
-	/*
-	 * Select fields from table.
-	 * OPTIONAL: Enter a where clause.
-	 */
-	public ResultSet selectFromTable(String fields, String table, String... options) throws SQLException {
-		statement = connect.createStatement();
-		
-		String query = "select " + fields + " from fitness_tracker." + table;
-		String opt = " where ";
-		
-		if(options.length == 0) {
-			resultSet = statement.executeQuery(query);
-		} else {
-			for(String s : options) {
-				opt = opt + s;
-			}
-			resultSet = statement.executeQuery("select " + fields + " from fitness_tracker." + table + opt);
-		}
-		return resultSet;
+	public DBConnect orWhere(String field, String operator, String value) {
+		this.query = this.query + " OR " + field + operator + value;
+		return this;
 	}
-	
+
+	public DBConnect orWhere(String[][] clauses) {
+		this.query = this.query + " OR ";
+
+		for (int i = 0; i < clauses.length; i++) {
+			this.query = this.query + clauses[i][0] + clauses[i][1] + clauses[i][2];
+
+			if (i != clauses.length - 1) {
+				this.query = this.query + " OR ";
+			}
+		}
+
+		return this;
+	}
+
+	public DBConnect join(String table, String columnOne, String operator, String columnTwo) {
+		this.query = this.query + " INNER JOIN " + table + " ON " + columnOne + operator + columnTwo;
+		return this;
+	}
+
+	public DBConnect count(String field, String table) {
+		this.queryType = "SELECT";
+		this.query = "SELECT COUNT(" + field + ") FROM " + table;
+		return this;
+	}
+
+	public DBConnect update(String table, String column, String value) {
+		this.queryType = "UPDATE";
+		this.query = "UPDATE " + table + " SET " + column + "=" + value;
+		return this;
+	}
+
+	public ResultSet execute() {
+		try {
+			this.statement = connect.createStatement();
+			
+			switch (this.queryType) {
+				case "SELECT":
+					return this.statement.executeQuery(this.query);
+				case "UPDATE":
+					this.statement.executeUpdate(this.query);
+				case "INSERT":
+					this.statement.executeUpdate(this.query);
+			}
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		return null;
+	}
+
 	/*
 	 * Close all connections to database.
 	 */
@@ -101,5 +160,39 @@ public class DBConnect {
 		}
 
 		System.out.println("Closed Connections!");
+	}
+
+	public ResultSet runQuery(String query) {
+		try {
+			statement = connect.createStatement();
+			return resultSet = statement.executeQuery(query);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		return null;
+	}
+
+	public void insertExercise(int exerciseId, int reps, double weight) {
+		try {
+			preparedStatement = connect.prepareStatement("INSERT INTO work_set VALUES (default,?,?,?)");
+			preparedStatement.setInt(1, exerciseId);
+			preparedStatement.setInt(2, reps);
+			preparedStatement.setDouble(3, weight);
+			preparedStatement.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void insertWorkout(int code, int setId) {
+		try {
+			preparedStatement = connect.prepareStatement("insert into workout values (default,?,?,0)");
+			preparedStatement.setInt(1, code);
+			preparedStatement.setInt(2, setId);
+			preparedStatement.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 	}
 }

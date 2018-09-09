@@ -1,18 +1,21 @@
 
 import java.sql.Array;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 
 import javafx.application.Application;
 import javafx.collections.ObservableList;
 import javafx.collections.FXCollections;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 
 public class FitnessTracker extends Application{
@@ -22,8 +25,7 @@ public class FitnessTracker extends Application{
 		DBConnect dbc = DBConnect.getInstance();
 
 		try {
-			dbc.connect();	
-			//dbc.printTable("work_set");
+			dbc.connect();
 			launch(args);
 		} catch (Exception e) {
 			throw e;
@@ -33,19 +35,8 @@ public class FitnessTracker extends Application{
 	}
 	
 	public void start(Stage primaryStage) throws Exception {
-		primaryStage.setTitle("Fitness Tracker");
-		
-		ComboBox<String> exerciseComboBox = new ComboBox<>();
 		
 		DBConnect dbc = DBConnect.getInstance();
-		
-		/* 
-		 * ComboBox
-		 */
-		ResultSet rs = dbc.selectFromTable("name", "exercise");
-		while(rs.next()) {
-			exerciseComboBox.getItems().add(rs.getString(1));
-		}
 		
 		/*
 		 * Label
@@ -68,38 +59,59 @@ public class FitnessTracker extends Application{
 		weightCol.setCellValueFactory(new PropertyValueFactory<Exercise, Integer>("weight"));
 		
 		setTable.getColumns().addAll(exerciseCol, repCol, weightCol);
-	
 		
-		rs = dbc.selectFromTable("set_id", "workout", "code = 2");
-		//ArrayList<Integer> setIds = new ArrayList<Integer>();
+		Programme currentProgramme = loadProgramme(dbc);
 		
-		String setIds = null;
+		/* 
+		 * ComboBox
+		 */
+		ComboBox<Integer> exerciseComboBox = new ComboBox<>();
 		
-		while(rs.next()) {
-			setIds += "," + rs.getString("set_id");
+		for(int i = 0; i < currentProgramme.getWorkoutCodes().length; i++) {
+			exerciseComboBox.getItems().add(currentProgramme.getWorkoutCodes()[i]);
 		}
 		
-		System.out.println("setids = " + setIds);
-		rs = dbc.selectFromTable("exercise_id, reps, weight", "work_set", "id in (" + setIds + ")");
+		exerciseComboBox.valueProperty().addListener((obs, oldItem, newItem) -> {
+			setTable.setItems(currentProgramme.getWorkouts().get(exerciseComboBox.getValue()).getExercises());
+		});
 		
-		Workout workout = new Workout(2);
+		/*
+		 * Button
+		 */
+		Button nextButton = new Button("Next");
+		Button prevButton = new Button("Prev");
+		Button completedButton = new Button("Completed");
 		
-		while(rs.next()) {
-			System.out.println("ResultSet: " + rs.getRow());
-			System.out.println("Exercise id: " + rs.getInt("exercise_id"));
-			Exercise e = new Exercise(rs.getInt("exercise_id"), rs.getInt("reps"), rs.getInt("weight"));
-			workout.addExercise(e);
-		}
+		nextButton.setOnAction(actionEven -> {
+			setTable.setItems(currentProgramme.nextWorkout().getExercises());
+		});
 		
-		System.out.println("length: " + workout.getExercises().size());
+		prevButton.setOnAction(actionEven -> {
+			setTable.setItems(currentProgramme.prevWorkout().getExercises());
+		});
 		
-		setTable.setItems(workout.getExercises());
+		completedButton.setOnAction(actionEven -> {
+			currentProgramme.getCurrentWorkout().newWorkout();
+			setTable.setItems(currentProgramme.nextWorkout().getExercises());
+		});
 		
+		setTable.setItems(currentProgramme.getCurrentWorkout().getExercises());
+		
+		HBox hbox = new HBox(exerciseComboBox, prevButton, nextButton, completedButton);
+		
+		primaryStage.setTitle("Fitness Tracker");
 		BorderPane border = new BorderPane();
 		border.setTop(workoutLabel);
 		border.setLeft(setTable);
-		border.setBottom(exerciseComboBox);
+		border.setBottom(hbox);
 		primaryStage.setScene(new Scene(border, 1280, 720));
 		primaryStage.show();
 	}
+	
+	public Programme loadProgramme(DBConnect dbc) {
+		Programme p = new Programme("Power Hypertrophy Upper Lower");
+		p.generateWorkouts();
+		return p;
+	}
+	
 }
